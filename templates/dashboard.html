@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Verkeer SEO Opportunity Engine</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<style>
+  :root{
+    --blue:#1857a8; --blue-light:#eaf2fb; --bg:#f5f6f8; --text:#1c1e21;
+    --muted:#65676b; --border:#dadde1; --green:#16794d; --amber:#a05a00; --red:#c0392b;
+  }
+  *{box-sizing:border-box;}
+  body{margin:0;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;background:var(--bg);color:var(--text);}
+  header{background:#fff;border-bottom:1px solid var(--border);padding:14px 28px;display:flex;align-items:center;justify-content:space-between;}
+  .brand{display:flex;align-items:center;gap:10px;font-weight:700;font-size:18px;}
+  .dot{width:10px;height:10px;border-radius:50%;background:var(--blue);}
+  .status{font-size:13px;color:var(--muted);display:flex;align-items:center;gap:8px;}
+  .pill{padding:4px 10px;border-radius:14px;font-size:12px;font-weight:600;}
+  .pill.demo{background:#fff3da;color:var(--amber);}
+  .pill.live{background:#e3f6ea;color:var(--green);}
+  main{max-width:1100px;margin:24px auto;padding:0 20px;}
+  .card{background:#fff;border:1px solid var(--border);border-radius:10px;padding:22px;margin-bottom:20px;}
+  .card h2{margin:0 0 6px;font-size:17px;}
+  .card p.sub{margin:0 0 16px;color:var(--muted);font-size:14px;}
+  .stats{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-bottom:6px;}
+  .stat{background:var(--blue-light);border-radius:8px;padding:14px;text-align:center;}
+  .stat .num{font-size:26px;font-weight:700;color:var(--blue);}
+  .stat .label{font-size:12px;color:var(--muted);margin-top:4px;}
+  button.primary{background:var(--blue);color:#fff;border:none;border-radius:6px;padding:10px 18px;font-size:14px;font-weight:600;cursor:pointer;}
+  button.primary:hover{background:#134685;}
+  button.secondary{background:#fff;border:1px solid var(--border);border-radius:6px;padding:10px 18px;font-size:14px;font-weight:600;cursor:pointer;color:var(--text);}
+  table{width:100%;border-collapse:collapse;font-size:13.5px;margin-top:10px;}
+  th{text-align:left;color:var(--muted);font-weight:600;font-size:12px;text-transform:uppercase;padding:8px;border-bottom:1px solid var(--border);}
+  td{padding:10px 8px;border-bottom:1px solid #eee;vertical-align:top;}
+  .badge{padding:3px 9px;border-radius:12px;font-size:11px;font-weight:700;}
+  .badge.High{background:#fde2e1;color:var(--red);}
+  .badge.Medium{background:#fff3da;color:var(--amber);}
+  .badge.Low{background:#e3f6ea;color:var(--green);}
+  .loading{color:var(--muted);font-style:italic;padding:20px 0;}
+  .summary-box{background:var(--blue-light);border-left:4px solid var(--blue);padding:14px 16px;border-radius:6px;font-size:14px;line-height:1.5;margin-top:14px;}
+  .footer-note{font-size:12px;color:var(--muted);margin-top:8px;}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="brand"><span class="dot"></span> Verkeer SEO Opportunity Engine</div>
+  <div class="status">
+    Data source: <span id="source-pill" class="pill demo">checking…</span>
+    {% if not connected %}
+      <button class="secondary" onclick="window.location.href='/connect'">Connect Google account</button>
+    {% else %}
+      <span style="color:var(--green);font-weight:600;">✓ Connected</span>
+    {% endif %}
+  </div>
+</header>
+
+<main>
+
+  <div class="card">
+    <h2>What this does</h2>
+    <p class="sub">
+      This tool reads {{ site_url }}'s real Google Search Console data, finds pages that already
+      rank on page 1–2 of Google (positions 4–15) but aren't getting their fair share of clicks,
+      and uses AI to explain — in plain English — exactly what to fix first. No manual spreadsheet work.
+    </p>
+    <button class="primary" onclick="runAnalysis()">Find this week's opportunities</button>
+    <button class="secondary" onclick="downloadReport()">Download weekly report</button>
+  </div>
+
+  <div class="card" id="stats-card" style="display:none;">
+    <h2>This week at a glance</h2>
+    <div class="stats">
+      <div class="stat"><div class="num" id="stat-pages">–</div><div class="label">Quick-win pages found</div></div>
+      <div class="stat"><div class="num" id="stat-impressions">–</div><div class="label">Impressions on those pages</div></div>
+      <div class="stat"><div class="num" id="stat-clicks">–</div><div class="label">Clicks currently earned</div></div>
+    </div>
+    <div class="summary-box" id="ai-summary"></div>
+  </div>
+
+  <div class="card" id="results-card" style="display:none;">
+    <h2>Recommended actions</h2>
+    <p class="sub">Ranked by priority. Written for marketers — no technical knowledge needed.</p>
+    <div id="loading" class="loading" style="display:none;">Asking Claude to analyse the data…</div>
+    <table id="results-table">
+      <thead>
+        <tr><th>Priority</th><th>Search term</th><th>Page</th><th>Why it matters</th><th>What to do</th></tr>
+      </thead>
+      <tbody id="results-body"></tbody>
+    </table>
+  </div>
+
+  <div class="footer-note">
+    Prototype built for the Verkeer AI &amp; Automation Engineer assessment · Python (Flask) + Google Search Console API + Claude API
+  </div>
+
+</main>
+
+<script>
+let lastOpportunities = [];
+
+async function runAnalysis(){
+  document.getElementById('stats-card').style.display = 'block';
+  document.getElementById('results-card').style.display = 'block';
+  document.getElementById('loading').style.display = 'block';
+  document.getElementById('results-body').innerHTML = '';
+
+  const gscResp = await fetch('/api/opportunities?days=28');
+  const gscData = await gscResp.json();
+  lastOpportunities = gscData.quick_wins || [];
+
+  const pill = document.getElementById('source-pill');
+  pill.textContent = gscData.source === 'live' ? 'Live data' : 'Demo data';
+  pill.className = 'pill ' + (gscData.source === 'live' ? 'live' : 'demo');
+
+  const totalImpr = lastOpportunities.reduce((s,r)=>s+r.impressions,0);
+  const totalClicks = lastOpportunities.reduce((s,r)=>s+r.clicks,0);
+  document.getElementById('stat-pages').textContent = lastOpportunities.length;
+  document.getElementById('stat-impressions').textContent = totalImpr.toLocaleString();
+  document.getElementById('stat-clicks').textContent = totalClicks.toLocaleString();
+
+  const analyzeResp = await fetch('/api/analyze', {
+    method:'POST', headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({opportunities: lastOpportunities})
+  });
+  const analysis = await analyzeResp.json();
+
+  document.getElementById('loading').style.display = 'none';
+  document.getElementById('ai-summary').textContent = analysis.summary || '';
+
+  const tbody = document.getElementById('results-body');
+  (analysis.recommendations || []).forEach(r=>{
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td><span class="badge ${r.priority}">${r.priority}</span></td>
+      <td>${r.query}</td>
+      <td style="max-width:160px;word-break:break-all;color:var(--muted);">${r.page}</td>
+      <td>${r.why_it_matters}</td>
+      <td>${r.recommended_action}</td>
+    `;
+    tbody.appendChild(tr);
+  });
+}
+
+async function downloadReport(){
+  const resp = await fetch('/api/weekly-report', {
+    method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({days:28})
+  });
+  const report = await resp.json();
+  const blob = new Blob([JSON.stringify(report, null, 2)], {type:'application/json'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'verkeer-weekly-seo-report.json';
+  a.click();
+}
+
+// auto-run on load so reviewers see results immediately
+window.addEventListener('load', runAnalysis);
+</script>
+
+</body>
+</html>
